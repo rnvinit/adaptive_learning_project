@@ -1,0 +1,32 @@
+touch .gitignore
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+.env
+*.log
+
+# VSCode / PyCharm settings
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Virtualenv
+venv/
+ENV/
+env/
+
+# Static/Media
+staticfiles/
+media/
+
+# Migrations (optional to ignore if you're not using db)
+**/migrations/
+
+# Python cache
+*.pyo
+*.pyd
+*.pyd

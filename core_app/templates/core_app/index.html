@@ -1,0 +1,49 @@
+{% extends 'core_app/base.html' %}
+
+{% block title %}Home - Adaptive Learning Platform{% endblock %}
+
+{% block content %}
+<main class="flex-grow flex flex-col items-center justify-center px-4 py-12">
+    <div class="max-w-4xl w-full mx-auto text-center">
+        <h1 class="text-3xl md:text-4xl font-bold mb-6 text-gray-800">
+            Welcome to My Adaptive Learning System!
+        </h1>
+        <p class="text-lg text-gray-700 mb-12 max-w-2xl mx-auto">
+            AI-Powered Adaptive Learning System with Generative AI for Personalized Education and Real-Time Feedback.
+        </p>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-8 justify-center">
+            <!-- Student Section -->
+            <div class="flex flex-col items-center bg-white p-6 rounded-lg shadow-md w-full sm:w-64">
+                <a href="{% url 'student_login' %}" 
+                   class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-lg shadow transition w-full text-center">
+                    Student Login
+                </a>
+                <p class="mt-4 text-gray-600 text-sm">
+                    Existing student? Sign in to continue learning.
+                </p>
+                <a href="{% url 'student_signup' %}" 
+                   class="mt-2 text-blue-600 hover:underline text-sm">
+                    New student? Register here.
+                </a>
+            </div>
+
+            <!-- Educator Section -->
+            <div class="flex flex-col items-center bg-white p-6 rounded-lg shadow-md w-full sm:w-64">
+                <a href="{% url 'educator_login' %}" 
+                   class="bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-6 rounded-lg shadow transition w-full text-center">
+                    Educator Login
+                </a>
+                <p class="mt-4 text-gray-600 text-sm">
+                    Faculty member? Access your dashboard.
+                </p>
+                <a href="{% url 'educator_signup' %}" 
+                   class="mt-2 text-green-600 hover:underline text-sm">
+                    New educator? Register here.
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
