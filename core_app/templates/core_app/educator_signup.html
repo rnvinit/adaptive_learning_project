@@ -25,6 +25,7 @@
 
     <form id="educatorSignupForm" method="POST" novalidate>
         {% csrf_token %}
+       
         <div class="mb-4">
             <label for="id_name" class="block text-gray-700 font-semibold mb-2">Full Name</label>
             <input type="text" id="id_name" name="name" required 

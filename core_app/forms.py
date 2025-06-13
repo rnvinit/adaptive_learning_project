@@ -95,22 +95,31 @@ class StudentSignupForm(BaseSignupForm):
 # -------------------------
 # Educator Signup Form
 # -------------------------
-class EducatorSignupForm(BaseSignupForm):
-    """
-    Signup form for educators.
-    Assigns the 'educator' user_type in UserProfile.
-    """
+class EducatorSignupForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password1', 'password2', 'first_name', 'last_name')
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.first_name = self.cleaned_data['name']
+        user.email = self.cleaned_data['email']
         if commit:
             user.save()
-            UserProfile.objects.create(user=user, user_type='educator')
+            # Get or create the user profile
+            profile, created = UserProfile.objects.get_or_create(
+                user=user,
+                defaults={'user_type': 'educator'}
+            )
+            if not created:
+                profile.user_type = 'educator'
+                profile.save()
         return user
-
 # -------------------------
 # Base Login Form
 # -------------------------
+
 class BaseLoginForm(AuthenticationForm):
     """
     Base login form with consistent styling.

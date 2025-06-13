@@ -14,9 +14,9 @@ from .forms import (
 )
 from .models import UserProfile
 
-# -----------------------
-# In-memory Data
-# -----------------------
+# -----------------------------
+# In-Memory Data Storage
+# -----------------------------
 USERS = {}
 QUIZZES = {
     "math101": {
@@ -31,9 +31,9 @@ LEADERBOARD = []
 BADGES = {}
 PROGRESS = {}
 
-# -----------------------
+# -----------------------------
 # Utility Functions
-# -----------------------
+# -----------------------------
 def assign_badge(username, score):
     if score >= 3:
         badge = "Expert"
@@ -44,137 +44,14 @@ def assign_badge(username, score):
     BADGES[username] = badge
     return badge
 
-# -----------------------
-# API Views
-# -----------------------
-@csrf_exempt
-def user_login(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            username = data.get('username')
-            password = data.get('password')
-            if username and password:
-                user = authenticate(request, username=username, password=password)
-                if user is not None:
-                    login(request, user)
-                    return JsonResponse({"success": True, "message": "User logged in!"})
-                return JsonResponse({"success": False, "message": "Invalid credentials."})
-            return JsonResponse({"success": False, "message": "Missing username or password."})
-        except json.JSONDecodeError:
-            return JsonResponse({"success": False, "message": "Invalid JSON."})
-    return JsonResponse({"success": False, "message": "Invalid request method."})
-
-@csrf_exempt
-def get_badge(request):
-    if request.user.is_authenticated:
-        badge = BADGES.get(request.user.username, "No badge yet.")
-        return JsonResponse({"username": request.user.username, "badge": badge})
-    return JsonResponse({"success": False, "message": "Not authenticated."})
-
-@csrf_exempt
-def update_leaderboard(request):
-    if request.method == 'POST' and request.user.is_authenticated:
-        try:
-            data = json.loads(request.body)
-            score = data.get('score')
-            if score is None:
-                return JsonResponse({"success": False, "message": "Missing score."})
-            badge = assign_badge(request.user.username, score)
-            existing = next((item for item in LEADERBOARD if item['username'] == request.user.username), None)
-            if existing:
-                existing['score'] = score
-                existing['badge'] = badge
-            else:
-                LEADERBOARD.append({
-                    "username": request.user.username,
-                    "score": score,
-                    "badge": badge
-                })
-            LEADERBOARD.sort(key=lambda x: x['score'], reverse=True)
-            return JsonResponse({"success": True, "leaderboard": LEADERBOARD})
-        except json.JSONDecodeError:
-            return JsonResponse({"success": False, "message": "Invalid JSON."})
-    return JsonResponse({"success": False, "message": "Invalid request."})
-
-@csrf_exempt
-def get_quiz(request):
-    quiz_id = request.GET.get('quiz_id')
-    quiz = QUIZZES.get(quiz_id)
-    if quiz:
-        return JsonResponse({"success": True, "quiz": quiz})
-    return JsonResponse({"success": False, "message": "Quiz not found."})
-
-@csrf_exempt
-def submit_quiz(request):
-    if request.method == 'POST' and request.user.is_authenticated:
-        try:
-            data = json.loads(request.body)
-            quiz_id = data.get('quiz_id')
-            answers = data.get('answers')
-            if not quiz_id or not answers:
-                return JsonResponse({"success": False, "message": "Missing quiz_id or answers."})
-            quiz = QUIZZES.get(quiz_id)
-            if not quiz:
-                return JsonResponse({"success": False, "message": "Quiz not found."})
-            score = 0
-            for question in quiz["questions"]:
-                qid = str(question["id"])
-                if answers.get(qid) == question["answer"]:
-                    score += 1
-            PROGRESS[request.user.username] = {
-                "completed": PROGRESS.get(request.user.username, {}).get("completed", 0) + 1,
-                "last_score": score
-            }
-            return JsonResponse({
-                "success": True,
-                "score": score,
-                "total": len(quiz["questions"]),
-                "badge": assign_badge(request.user.username, score)
-            })
-        except json.JSONDecodeError:
-            return JsonResponse({"success": False, "message": "Invalid JSON."})
-    return JsonResponse({"success": False, "message": "Invalid request."})
-
-@csrf_exempt
-def assign_quiz(request):
-    if request.method == 'POST' and request.user.is_authenticated:
-        try:
-            data = json.loads(request.body)
-            student = data.get('student')
-            quiz_id = data.get('quiz_id')
-            if student and quiz_id:
-                assigned_quizzes = USERS.setdefault(student, {}).setdefault('quizzes', [])
-                if quiz_id not in assigned_quizzes:
-                    assigned_quizzes.append(quiz_id)
-                return JsonResponse({
-                    "success": True,
-                    "message": f"Quiz {quiz_id} assigned to {student}."
-                })
-            return JsonResponse({"success": False, "message": "Missing student or quiz_id."})
-        except json.JSONDecodeError:
-            return JsonResponse({"success": False, "message": "Invalid JSON."})
-    return JsonResponse({"success": False, "message": "Invalid request."})
-
-@csrf_exempt
-def get_progress(request):
-    if request.user.is_authenticated:
-        progress = PROGRESS.get(request.user.username, {"completed": 0})
-        return JsonResponse({
-            "username": request.user.username,
-            "progress": progress
-        })
-    return JsonResponse({"success": False, "message": "Not authenticated."})
-
-# -----------------------
-# Page Views
-# -----------------------
+# -----------------------------
+# HTML VIEWS (Student / Educator)
+# -----------------------------
 def home(request):
     return render(request, 'core_app/index.html')
 
-def leaderboard(request):
-    sorted_leaderboard = sorted(LEADERBOARD, key=lambda x: x['score'], reverse=True)
-    return render(request, 'core_app/leaderboard.html', {'leaderboard': sorted_leaderboard})
+def login_page(request):
+    return render(request, 'core_app/login.html')
 
 def student_page(request):
     return render(request, 'core_app/student_page.html')
@@ -182,25 +59,39 @@ def student_page(request):
 def educator_page(request):
     return render(request, 'core_app/educator_page.html')
 
-def login_page(request):
-    return render(request, 'core_app/login.html')
+def leaderboard(request):
+    sorted_board = sorted(LEADERBOARD, key=lambda x: x['score'], reverse=True)
+    return render(request, 'core_app/leaderboard.html', {'leaderboard': sorted_board})
 
-# -----------------------
-# Authentication Views
-# -----------------------
+def terms_view(request):
+    return render(request, 'core_app/terms.html')
+
+def privacy_view(request):
+    return render(request, 'core_app/privacy.html')
+
+def cookies_view(request):
+    return render(request, 'core_app/cookies.html')
+
+
+# -----------------------------
+# Student Authentication Views
+# -----------------------------
 def student_login(request):
     if request.method == 'POST':
         form = StudentLoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            profile = UserProfile.objects.get(user=user)
-            if profile.user_type != 'student':
-                messages.error(request, "Invalid user type for student login.")
+            try:
+                if user.userprofile.user_type != 'student':
+                    messages.error(request, "Access denied for non-students.")
+                    return redirect('student_login')
+            except UserProfile.DoesNotExist:
+                messages.error(request, "Profile not found.")
                 return redirect('student_login')
             login(request, user)
-            messages.success(request, f"Welcome back, {user.username}!")
             return redirect('student_dashboard')
-        messages.error(request, "Invalid username or password.")
+        else:
+            messages.error(request, "Invalid credentials.")
     else:
         form = StudentLoginForm()
     return render(request, 'core_app/student_login.html', {'form': form})
@@ -209,8 +100,8 @@ def student_signup(request):
     if request.method == 'POST':
         form = StudentSignupForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            messages.success(request, "Account created successfully! Please log in.")
+            form.save()
+            messages.success(request, "Registration successful! Please login.")
             return redirect('student_login')
     else:
         form = StudentSignupForm()
@@ -218,11 +109,14 @@ def student_signup(request):
 
 @login_required
 def student_dashboard(request):
-    profile = UserProfile.objects.get(user=request.user)
-    if profile.user_type != 'student':
+    try:
+        if request.user.userprofile.user_type != 'student':
+            logout(request)
+            return redirect('student_login')
+    except UserProfile.DoesNotExist:
         logout(request)
-        messages.error(request, "Access denied.")
         return redirect('student_login')
+
     return render(request, 'core_app/student_dashboard.html', {
         'user': request.user,
         'progress': PROGRESS.get(request.user.username, {})
@@ -231,98 +125,196 @@ def student_dashboard(request):
 @login_required
 def student_logout(request):
     logout(request)
-    messages.success(request, "You have been logged out.")
+    messages.success(request, "Logged out successfully.")
     return redirect('home')
 
+# -----------------------------
+# Educator Authentication Views
+# -----------------------------
 def educator_login(request):
     if request.method == 'POST':
         form = EducatorLoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             try:
-                profile = user.userprofile
-                if profile.user_type == 'educator':
-                    login(request, user)
-                    messages.success(request, f"Welcome back, {user.first_name}!")
-                    return redirect('educator_dashboard')
-                else:
-                    messages.error(request, "This account is not registered as an educator.")
+                if user.userprofile.user_type != 'educator':
+                    messages.error(request, "Not registered as educator.")
+                    return redirect('educator_login')
             except UserProfile.DoesNotExist:
-                messages.error(request, "User profile not found. Please contact support.")
+                messages.error(request, "Profile error.")
+                return redirect('educator_login')
+            login(request, user)
+            return redirect('educator_dashboard')
         else:
-            messages.error(request, "Invalid username or password.")
+            messages.error(request, "Invalid credentials.")
     else:
         form = EducatorLoginForm()
     return render(request, 'core_app/educator_login.html', {'form': form})
-
 
 def educator_signup(request):
     if request.method == 'POST':
         form = EducatorSignupForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            user = form.save()  # Don't create UserProfile again here
             messages.success(request, "Account created successfully! Please log in.")
             return redirect('educator_login')
     else:
         form = EducatorSignupForm()
     return render(request, 'core_app/educator_signup.html', {'form': form})
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+
+@login_required
+def educator_logout(request):
+    logout(request)
+    messages.success(request, "Logged out successfully.")
+    return redirect('home')
 
 @csrf_exempt
 @login_required
 def educator_dashboard(request):
     try:
-        profile = request.user.userprofile
-        if profile.user_type != 'educator':
+        if request.user.userprofile.user_type != 'educator':
             logout(request)
-            return JsonResponse({
-                "success": False,
-                "message": "You don't have permission to access this page."
-            }, status=403)
-            
-        # Send quizzes as JSON
-        quizzes = [
-            {
-                "quiz_id": quiz_id,
-                "title": quiz_data.get("title"),
-                "num_questions": len(quiz_data.get("questions", []))
-            }
-            for quiz_id, quiz_data in QUIZZES.items()
-        ]
-        return JsonResponse({
-            "success": True,
-            "username": request.user.username,
-            "quizzes": quizzes
-        })
+            return redirect('educator_login')
     except UserProfile.DoesNotExist:
         logout(request)
-        return JsonResponse({
-            "success": False,
-            "message": "User profile not found. Please contact support."
-        }, status=404)
+        return redirect('educator_login')
 
-    
-@login_required
-def educator_logout(request):
-    logout(request)
-    messages.success(request, "You have been logged out.")
-    return redirect('home')
+    # Sample static in-memory content (replace with dynamic data later)
+    courses = [
+        {"name": "Math 101", "students": 25, "status": "Active"},
+        {"name": "Science Basics", "students": 30, "status": "Active"},
+    ]
 
-# -----------------------
-# Custom LoginView
-# -----------------------
+    quizzes = {
+        "math101": {
+            "title": "Basic Math Quiz",
+            "questions_count": len(QUIZZES["math101"]["questions"])
+        }
+    }
+
+    recent_submissions = [
+        {"quiz": "Basic Math Quiz", "student": "student1", "score": "3/5"},
+        {"quiz": "Science Quiz", "student": "student2", "score": "4/5"},
+    ]
+
+    return render(request, 'core_app/educator_dashboard.html', {
+        'user': request.user,
+        'courses': courses,
+        'quizzes': quizzes,
+        'recent_submissions': recent_submissions,
+    })
+
+# -----------------------------
+# LoginView Customization
+# -----------------------------
 class CustomLoginView(LoginView):
     template_name = 'core_app/login.html'
 
     def get_success_url(self):
-        user = self.request.user
         try:
-            if user.userprofile.user_type == 'student':
+            utype = self.request.user.userprofile.user_type
+            if utype == 'student':
                 return reverse_lazy('student_dashboard')
-            elif user.userprofile.user_type == 'educator':
+            elif utype == 'educator':
                 return reverse_lazy('educator_dashboard')
-        except AttributeError:
-            pass
-        return reverse_lazy('home')
+        except:
+            return reverse_lazy('home')
+
+# -----------------------------
+# API / JSON VIEWS
+# -----------------------------
+@csrf_exempt
+def user_login(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user = authenticate(username=data.get('username'), password=data.get('password'))
+            if user:
+                login(request, user)
+                return JsonResponse({"success": True, "message": "Login successful."})
+            return JsonResponse({"success": False, "message": "Invalid credentials."})
+        except:
+            return JsonResponse({"success": False, "message": "Invalid request."})
+    return JsonResponse({"success": False, "message": "POST method required."})
+
+@csrf_exempt
+@login_required
+def get_badge(request):
+    return JsonResponse({
+        "username": request.user.username,
+        "badge": BADGES.get(request.user.username, "No badge yet.")
+    })
+
+@csrf_exempt
+@login_required
+def update_leaderboard(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            score = data.get("score")
+            if score is None:
+                return JsonResponse({"success": False, "message": "Score is required."})
+            badge = assign_badge(request.user.username, score)
+            existing = next((entry for entry in LEADERBOARD if entry["username"] == request.user.username), None)
+            if existing:
+                existing.update(score=score, badge=badge)
+            else:
+                LEADERBOARD.append({"username": request.user.username, "score": score, "badge": badge})
+            return JsonResponse({"success": True, "leaderboard": sorted(LEADERBOARD, key=lambda x: x['score'], reverse=True)})
+        except:
+            return JsonResponse({"success": False, "message": "Invalid data."})
+    return JsonResponse({"success": False, "message": "POST method required."})
+
+@csrf_exempt
+def get_quiz(request):
+    quiz_id = request.GET.get('quiz_id')
+    quiz = QUIZZES.get(quiz_id)
+    if quiz:
+        return JsonResponse({"success": True, "quiz": quiz}, safe=False)
+    return JsonResponse({"success": False, "message": "Quiz not found."})
+
+@csrf_exempt
+@login_required
+def submit_quiz(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            quiz = QUIZZES.get(data.get('quiz_id'))
+            if not quiz:
+                return JsonResponse({"success": False, "message": "Quiz not found."})
+            answers = data.get('answers', {})
+            score = sum(1 for q in quiz["questions"] if answers.get(str(q["id"])) == q["answer"])
+            PROGRESS[request.user.username] = {
+                "completed": PROGRESS.get(request.user.username, {}).get("completed", 0) + 1,
+                "last_score": score
+            }
+            badge = assign_badge(request.user.username, score)
+            return JsonResponse({"success": True, "score": score, "total": len(quiz["questions"]), "badge": badge})
+        except:
+            return JsonResponse({"success": False, "message": "Invalid data."})
+    return JsonResponse({"success": False, "message": "POST method required."})
+
+@csrf_exempt
+@login_required
+def assign_quiz(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            student = data.get('student')
+            quiz_id = data.get('quiz_id')
+            if student and quiz_id:
+                USERS.setdefault(student, {}).setdefault('quizzes', []).append(quiz_id)
+                return JsonResponse({"success": True, "message": f"Assigned quiz '{quiz_id}' to {student}."})
+            return JsonResponse({"success": False, "message": "Missing data."})
+        except:
+            return JsonResponse({"success": False, "message": "Invalid JSON."})
+    return JsonResponse({"success": False, "message": "POST method required."})
+
+@csrf_exempt
+@login_required
+def get_progress(request):
+    return JsonResponse({
+        "username": request.user.username,
+        "progress": PROGRESS.get(request.user.username, {"completed": 0, "last_score": 0})
+    })

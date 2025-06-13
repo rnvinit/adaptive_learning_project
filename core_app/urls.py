@@ -39,4 +39,8 @@ urlpatterns = [
     path('api/submit_quiz/', views.submit_quiz, name='submit_quiz'),
     path('api/assign_quiz/', views.assign_quiz, name='assign_quiz'),
     path('api/get_progress/', views.get_progress, name='get_progress'),
+
+    path('terms/', views.terms_view, name='terms'),
+    path('privacy/', views.privacy_view, name='privacy'),
+    path('cookies/', views.cookies_view, name='cookies'),
 ]
