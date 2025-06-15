@@ -1,0 +1,10 @@
+# Create requirements.txt with proper formatting
+@"
+openai>=0.27.8
+numpy>=1.21.0
+pandas>=1.3.0
+python-dotenv>=0.19.0
+django>=3.2
+"@ | Out-File -Encoding utf8 requirements.txt
+
+

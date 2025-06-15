@@ -197,6 +197,19 @@ def educator_dashboard(request):
         {"quiz": "Basic Math Quiz", "student": "student1", "score": "3/5"},
         {"quiz": "Science Quiz", "student": "student2", "score": "4/5"},
     ]
+    courses = [
+        {'title': 'Mathematics', 'students': 30},
+        {'title': 'Science', 'students': 25}
+    ]
+
+    context = {
+        'user': request.user,
+        'quizzes': quizzes,
+        'recent_submissions': recent_submissions,
+        'courses': courses,  # ← add this
+    }
+
+    return render(request, 'core_app/educator_dashboard.html', context)
 
     return render(request, 'core_app/educator_dashboard.html', {
         'user': request.user,
@@ -318,3 +331,57 @@ def get_progress(request):
         "username": request.user.username,
         "progress": PROGRESS.get(request.user.username, {"completed": 0, "last_score": 0})
     })
+
+from .ai.engines.adaptive import AdaptiveEngine
+from .ai.services.gpt_integration import AIContentGenerator
+
+def check_answer(user_answer, correct_answer):
+    """
+    Helper function to validate quiz answers
+    Args:
+        user_answer (str): Answer submitted by user
+        correct_answer (str): Correct answer from question
+    Returns:
+        bool: True if answer is correct
+    """
+    return str(user_answer).strip().lower() == str(correct_answer).strip().lower()
+
+@login_required
+def adaptive_quiz(request):
+    engine = AdaptiveEngine()
+    difficulty = engine.calculate_difficulty(request.user.id)
+    
+    if request.method == 'GET':
+        # Sample question - replace with your actual question generation
+        question = {
+            'text': "What is the capital of France?",
+            'options': ["London", "Paris", "Berlin", "Madrid"],
+            'correct': "Paris",
+            'explanation': "Paris is the capital and most populous city of France"
+        }
+        return render(request, 'quiz_page.html', {'question': question})
+    
+    elif request.method == 'POST':
+        try:
+            is_correct = check_answer(
+                request.POST.get('answer', ''),
+                request.POST.get('correct_answer', '')
+            )
+            
+            engine.update_user_state(
+                user_id=request.user.id,
+                correct=is_correct,
+                response_time=float(request.POST.get('time_spent', 30))
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'is_correct': is_correct,
+                'explanation': request.POST.get('explanation', '')
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            }, status=400)

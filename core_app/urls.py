@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/submit_quiz/', views.submit_quiz, name='submit_quiz'),
     path('api/assign_quiz/', views.assign_quiz, name='assign_quiz'),
     path('api/get_progress/', views.get_progress, name='get_progress'),
+    #path('student/quiz/<int:quiz_id>/', views.attempt_quiz, name='attempt_quiz'),
 
     path('terms/', views.terms_view, name='terms'),
     path('privacy/', views.privacy_view, name='privacy'),
